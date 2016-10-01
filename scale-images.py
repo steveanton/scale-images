@@ -43,13 +43,16 @@ class Journal(object):
     def has_converted_file(self, path):
         return path in self.converted_files
 
-def scale_image(image_path, relpath, journal, dry_run=False):
+def scale_image(image_path, relpath, journal, dry_run=False, only_square=True):
     if journal.has_converted_file(relpath):
         #print("%s already converted" % (image_path,))
         return
+    if os.path.isfile(image_path + ".bak"):
+        #print("%s already converted (.bak file exists)" % (image_path,))
+        return
     img = Image.open(image_path)
-    if img.width != img.height:
-        print("%s is not square -- skipping" % (image_path,))
+    if only_square and img.width != img.height:
+        print("%s is not square (%dx%d) -- skipping" % (image_path, img.width, img.height))
         img.close()
         return
     # copy the image data to an in memory buffer so we can overwrite the original file
@@ -73,7 +76,7 @@ def scale_images(root_dir, journal_path, dry_run=False):
         for filename in files:
             path = root + os.sep + filename
             relpath = os.path.relpath(path, root_dir)
-            if path.endswith(".jpg") or path.endswith(".png"):
+            if path.endswith(".jpg") or path.endswith(".png") or path.endswith(".gif"):
                 scale_image(path, relpath, journal, dry_run)
 
 if __name__ == "__main__":
@@ -81,10 +84,11 @@ if __name__ == "__main__":
             "Scales all images in a directory by a factor of two.")
     parser.add_argument("dir")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--only-square", action="store_true")
 
     args = parser.parse_args()
 
     if not os.path.isdir(args.dir):
         print("%s is not a directory" % (args.dir,), file=sys.stderr)
         sys.exit(1)
-    scale_images(args.dir, "%s/scale-images.journal" % (args.dir,), args.dry_run)
+    scale_images(args.dir, "%s/scale-images.journal" % (args.dir,), args.dry_run, args.only_square)
